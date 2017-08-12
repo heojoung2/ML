@@ -1,0 +1,2 @@
+model_checkpoint_path: "C:/Users/heojo/Desktop/Colorization/ckpt/my-model"
+all_model_checkpoint_paths: "C:/Users/heojo/Desktop/Colorization/ckpt/my-model"
