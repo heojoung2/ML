@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*-
 
 import tensorflow as tf
+import tensorflow.contrib.slim as slim
 import numpy as np
 import h5py
 import math
@@ -38,9 +39,14 @@ def Fully_connected(input, weight_name, bias_name, input_num, output_num):
     return relu
 
 def Fusion(input1,input2,weight_name,bias_name):
-    weight = tf.get_variable(weight_name, shape=[256, 512], initializer=tf.contrib.layers.xavier_initializer())
+    input2 = tf.tile(input2,[1,28*28])
+    input2 = tf.reshape(input2,[2,28,28,256])
+    input1 = tf.concat([input1,input2],3)
+    weight = tf.get_variable(weight_name, shape=[1,1,512,256], initializer=tf.contrib.layers.xavier_initializer())
     bias = tf.get_variable(bias_name, shape=[256], initializer=tf.contrib.layers.xavier_initializer())
-    return input2
+    convolution = tf.nn.conv2d(input1, weight, strides=[1, 1, 1, 1], padding="SAME")+bias
+    relu = tf.nn.relu(convolution)
+    return relu
 
 def Upsample(input,weight_name,height_size,width_size, channel):
     weight = tf.get_variable(weight_name, shape=[2, 2, channel, channel], initializer=tf.contrib.layers.xavier_initializer())
@@ -83,7 +89,7 @@ class Model:
         mid_level1 = Convolution(input=low_level6, weight_name="mid_level_w1",bias_name="mid_level_b1", input_num=512, output_num=512, stride=1)
         mid_level2 = Convolution(input=mid_level1, weight_name="mid_level_w2",bias_name="mid_level_b2", input_num=512, output_num=256, stride=1)
 
-        fusion_layer = Fusion(input1=global_level7, input2=mid_level2, weight_name="fusion_w", bias_name="fusion_b")
+        fusion_layer = Fusion(input1=mid_level2, input2=global_level7, weight_name="fusion_w", bias_name="fusion_b")
 
         colorization_network1 = Convolution(input=fusion_layer, weight_name="colorization_network1_w1",bias_name="colorization_network1_b1", input_num=256, output_num=128, stride=1)
         colorization_network2 = Upsample(input = colorization_network1,weight_name="colorization_network_w2", height_size = math.ceil(image_height_size/4), width_size = math.ceil(image_width_size/4), channel = 128)
@@ -104,6 +110,12 @@ class Model:
         self.loss = colorization_loss - (loss_parameter * classification_loss)
         self.train = tf.train.AdadeltaOptimizer(learning_rate=learning_rate).minimize(self.loss)
 
+        loss_graph = tf.summary.scalar("loss",self.loss)
+        self.merged_graph = tf.summary.merge_all()
+
+    def Loss_graph(self, X, Y_colorization, Y_classification):
+        return self.sess.run(self.merged_graph, feed_dict={self.X: X, self.Y_colorization: Y_colorization, self.Y_classification: Y_classification})
+
     def Loss(self, X, Y_colorization, Y_classification):
         return self.sess.run(self.loss, feed_dict={self.X: X, self.Y_colorization: Y_colorization, self.Y_classification: Y_classification})
 
@@ -111,7 +123,7 @@ class Model:
         return self.sess.run(self.train,feed_dict={self.X: X, self.Y_colorization : Y_colorization, self.Y_classification : Y_classification})
 
 #varaible
-epochs = 10 #11
+epochs = 11 #11
 batch_size = 2 #128
 X, Y_colorization, Y_classification  = read_train_data()
 
@@ -120,11 +132,19 @@ sess = tf.InteractiveSession()
 model = Model(sess)
 saver = tf.train.Saver()
 sess.run(tf.global_variables_initializer())
+writer = tf.summary.FileWriter("./board",sess.graph)
 
 #train model
 for epoch in range(epochs):
-    print(model.Loss(X, Y_colorization, Y_classification))
+    loss = model.Loss(X, Y_colorization, Y_classification)
+    print(loss)
     model.Train(X, Y_colorization, Y_classification)
+    graph_loss = model.Loss_graph(X, Y_colorization, Y_classification)
+    writer.add_summary(graph_loss,epoch)
 
 saver.save(sess,'C:/Users/heojo/Desktop/Colorization/ckpt/my-model')
+writer.close()
 sess.close()
+
+#tensorboard --logdir=/board
+#localhost:6006
