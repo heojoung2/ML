@@ -108,7 +108,7 @@ for epoch in range(epochs):
     graph_loss = model.Loss_graph(X, Y_colorization, Y_classification)
     writer.add_summary(graph_loss,epoch)
 
-saver.save(sess,'C:/Users/heojo/Desktop/Colorization/ckpt/my-model')
+saver.save(sess,'C:/Users/heojo/Desktop/Colorization_slim/ckpt/my-model')
 writer.close()
 sess.close()
 
