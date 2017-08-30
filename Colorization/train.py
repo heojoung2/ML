@@ -110,8 +110,8 @@ class Model:
 
         colorization_loss = tf.losses.mean_squared_error(labels=self.Y_colorization, predictions=self.colorization_network8)
 
-        classification_level1 = Fully_connected(input=global_level6,name="classfication_level1", input_num=512, output_num=256)
-        self.classification_level2 = Fully_connected(input=classification_level1,name="classfication_level2", input_num=256, output_num=classification_num)
+        classification_level1 = Fully_connected(input=global_level6,name="classification_level1", input_num=512, output_num=256)
+        self.classification_level2 = Fully_connected(input=classification_level1,name="classification_level2", input_num=256, output_num=classification_num)
 
         classification_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=Y_classification_one_hot, logits=self.classification_level2))
 

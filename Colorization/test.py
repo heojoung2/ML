@@ -99,8 +99,8 @@ class Model:
         colorization_network7 = Convolution(input=colorization_network6, name="colorization_network7", input_num=32, output_num=2, stride=1)
         self.colorization_network8 = Upsample(input=colorization_network7, name="colorization_network8", height_size=self.height, width_size=self.width, channel=2)
 
-        classification_level1 = Fully_connected(input=global_level6,name="classfication_level1", input_num=512, output_num=256)
-        self.classification_level2 = Fully_connected(input=classification_level1,name="classfication_level2", input_num=256, output_num=classification_num)
+        classification_level1 = Fully_connected(input=global_level6,name="classification_level1", input_num=512, output_num=256)
+        self.classification_level2 = Fully_connected(input=classification_level1,name="classification_level2", input_num=256, output_num=classification_num)
 
     def Predict_y_colorization(self, X, X2):
         return self.sess.run(self.colorization_network8, feed_dict={self.X: X, self.X2:X2})
