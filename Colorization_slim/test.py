@@ -6,47 +6,14 @@ import numpy as np
 import math
 import cv2
 
-def Convolution(input, name, input_num, output_num, stride,reuse_flag=False):
-    with tf.variable_scope(name, reuse=reuse_flag):
-        weight = tf.get_variable("weight", shape=[3,3,input_num,output_num],initializer=tf.contrib.layers.xavier_initializer())
-        bias = tf.get_variable("bias", shape=[output_num], initializer=tf.contrib.layers.xavier_initializer())
-        convolution = tf.nn.conv2d(input, weight, strides=[1, stride, stride, 1], padding="SAME") + bias
-
-        if name=="colorization_network7":
-            sigmoid = tf.nn.sigmoid(convolution)
-            return sigmoid
-
-        relu = tf.nn.relu(convolution)
-        return relu
-
-def Fully_connected(input, name, input_num, output_num):
-    with tf.variable_scope(name):
-        weight = tf.get_variable("weight",shape=[input_num,output_num],initializer=tf.contrib.layers.xavier_initializer())
-        bias = tf.get_variable("name",shape=[output_num],initializer=tf.contrib.layers.xavier_initializer())
-
-        if name=="global_level5":
-            input = tf.reshape(input,[-1,input_num])
-
-        matmul_matrix = tf.matmul(input,weight)+bias
-        relu = tf.nn.relu(matmul_matrix)
-        return relu
-
-def Fusion(input1,input2,weight_name,bias_name):
+def Fusion(input1,input2,name):
     col = int(input1.shape[1])
     row = int(input1.shape[2])
     input2 = tf.tile(input2,[1,col*row])
     input2 = tf.reshape(input2,[batch_size, col, row,256])
     input1 = tf.concat([input1,input2],3)
-    weight = tf.get_variable(weight_name, shape=[1,1,512,256], initializer=tf.contrib.layers.xavier_initializer())
-    bias = tf.get_variable(bias_name, shape=[256], initializer=tf.contrib.layers.xavier_initializer())
-    convolution = tf.nn.conv2d(input1, weight, strides=[1, 1, 1, 1], padding="SAME")+bias
-    relu = tf.nn.relu(convolution)
-    return relu
-
-def Upsample(input,name,height_size,width_size, channel):
-    weight = tf.get_variable(name, shape=[2, 2, channel, channel], initializer=tf.contrib.layers.xavier_initializer())
-    upconvolution = tf.nn.conv2d_transpose(input,weight,[batch_size, height_size, width_size, channel],[1,2,2,1],padding="SAME",name=None)
-    return upconvolution
+    fusion = slim.conv2d(input1, 256, [3, 3], scope=name)
+    return fusion
 
 class Model:
     def __init__(self, sess,height,width):
@@ -57,53 +24,48 @@ class Model:
 
     def build_network(self):
         classification_num = 2 #205
+        loss_parameter = 1/300
+        learning_rate = 0.001
+
         self.X = tf.placeholder(tf.float32, [batch_size,self.height,self.width])
         X = tf.reshape(self.X, [batch_size,self.height,self.width,1])
 
         self.X2 = tf.placeholder(tf.float32, [batch_size, 224, 224])
         X2 = tf.reshape(self.X2, [batch_size, 224, 224, 1])
 
-        first_low_level1 = Convolution(input=X, name = "low_level1", input_num=1, output_num = 64, stride=2)
-        first_low_level2 = Convolution(input=first_low_level1, name = "low_level2", input_num=64, output_num=128, stride=1)
-        first_low_level3 = Convolution(input=first_low_level2, name = "low_level3", input_num=128, output_num=128, stride=2)
-        first_low_level4 = Convolution(input=first_low_level3, name = "low_level4", input_num=128, output_num=256, stride=1)
-        first_low_level5 = Convolution(input=first_low_level4, name = "low_level5", input_num=256, output_num=256, stride=2)
-        first_low_level6 = Convolution(input=first_low_level5, name = "low_level6", input_num=256, output_num=512, stride=1)
+        first_low_level = slim.stack(X, slim.conv2d, [(64, [3, 3], 2), (128, [3, 3], 1), (128, [3, 3], 2), (256, [3, 3], 1), (256,[3,3], 2), (512,[3,3],1)],scope='low_level')
 
-        second_low_level1 = Convolution(input=X2, name = "low_level1", input_num=1, output_num = 64, stride=2,reuse_flag=True)
-        second_low_level2 = Convolution(input=second_low_level1, name = "low_level2", input_num=64, output_num=128, stride=1,reuse_flag=True)
-        second_low_level3 = Convolution(input=second_low_level2, name = "low_level3", input_num=128, output_num=128, stride=2,reuse_flag=True)
-        second_low_level4 = Convolution(input=second_low_level3, name = "low_level4", input_num=128, output_num=256, stride=1,reuse_flag=True)
-        second_low_level5 = Convolution(input=second_low_level4, name = "low_level5", input_num=256, output_num=256, stride=2,reuse_flag=True)
-        second_low_level6 = Convolution(input=second_low_level5, name = "low_level6", input_num=256, output_num=512, stride=1,reuse_flag=True)
+        second_low_level1 = slim.conv2d(X2, 64, [3, 3], stride=2, scope='low_level/low_level_1',reuse=True)
+        second_low_level2 = slim.conv2d(second_low_level1, 128, [3, 3], scope='low_level/low_level_2',reuse=True)
+        second_low_level3 = slim.conv2d(second_low_level2, 128, [3, 3], stride=2, scope='low_level/low_level_3',reuse=True)
+        second_low_level4 = slim.conv2d(second_low_level3, 256, [3, 3], scope='low_level/low_level_4',reuse=True)
+        second_low_level5 = slim.conv2d(second_low_level4, 256, [3, 3], stride=2, scope='low_level/low_level_5',reuse=True)
+        second_low_level6 = slim.conv2d(second_low_level5, 512, [3, 3], scope='low_level/low_level_6', reuse=True)
 
-        mid_level1 = Convolution(input=first_low_level6, name="mid_level1", input_num=512, output_num=512, stride=1)
-        mid_level2 = Convolution(input=mid_level1, name="mid_level2", input_num=512, output_num=256, stride=1)
+        mid_level = slim.stack(first_low_level, slim.conv2d, [(512,[3,3]), (256,[3,3])],scope='mid_level')
 
-        global_level1 = Convolution(input=second_low_level6, name = "global_level1",  input_num=512, output_num=512, stride=2)
-        global_level2 = Convolution(input=global_level1, name = "global_level2", input_num=512, output_num=512, stride=1)
-        global_level3 = Convolution(input=global_level2, name = "global_level3", input_num=512, output_num=512, stride=2)
-        global_level4 = Convolution(input=global_level3, name = "global_level4", input_num=512, output_num=512, stride=1)
-        global_level5 = Fully_connected(input= global_level4, name="global_level5", input_num=7*7*512, output_num=1024)
-        global_level6 = Fully_connected(input= global_level5, name="global_level6",input_num=1024, output_num=512)
-        global_level7 = Fully_connected(input = global_level6,name="global_level7", input_num=512, output_num=256)
+        global_level1 = slim.stack(second_low_level6, slim.conv2d, [(512, [3, 3], 2), (512, [3, 3], 1), (512, [3, 3], 2), (512, [3, 3], 1)], scope='global_level1')
+        global_level1 = tf.reshape(global_level1, [-1, 7*7*512])
+        global_level2 = slim.fully_connected(global_level1, 1024, scope='global_level2')
+        global_level3 = slim.fully_connected(global_level2, 512, scope='global_level3')
+        global_level4 = slim.fully_connected(global_level3, 256, scope='global_level4')
 
-        fusion_layer = Fusion(input1=mid_level2, input2=global_level7, weight_name="fusion_w", bias_name="fusion_b")
+        fusion_layer = Fusion(input1=mid_level, input2=global_level4, name="fusion")
 
-        colorization_network1 = Convolution(input=fusion_layer,name="colorization_network1", input_num=256, output_num=128, stride=1)
-        colorization_network2 = Upsample(input = colorization_network1,name="colorization_network2", height_size = math.ceil(self.height/4), width_size = math.ceil(self.width/4), channel = 128)
-        colorization_network3 = Convolution(input=colorization_network2, name="colorization_network3", input_num=128, output_num=64, stride=1)
-        colorization_network4 = Convolution(input=colorization_network3, name="colorization_network4", input_num=64, output_num=64, stride=1)
-        colorization_network5 = Upsample(input = colorization_network4,name="colorization_network5", height_size = math.ceil(self.height/2), width_size = math.ceil(self.width/2), channel = 64)
-        colorization_network6 = Convolution(input=colorization_network5, name="colorization_network6", input_num=64, output_num=32, stride=1)
-        colorization_network7 = Convolution(input=colorization_network6, name="colorization_network7", input_num=32, output_num=2, stride=1)
-        self.colorization_network8 = Upsample(input=colorization_network7, name="colorization_network8", height_size=self.height, width_size=self.width, channel=2)
+        colorization_network1 = slim.conv2d(fusion_layer,128,[3,3],scope="colorization_network1")
+        colorization_network2 = tf.image.resize_images(colorization_network1, [math.ceil(self.height / 4), math.ceil(self.width / 4)])
+        colorization_network3 = slim.stack(colorization_network2, slim.conv2d, [(64,[3,3]), (64,[3,3])],scope='colorization_network3')
+        colorization_network4 = tf.image.resize_images(colorization_network3, [math.ceil(self.height / 2),math.ceil(self.width / 2)])
+        colorization_network5 = slim.conv2d(colorization_network4, 32, [3, 3], scope="colorization_network5")
 
-        classification_level1 = Fully_connected(input=global_level6,name="classfication_level1", input_num=512, output_num=256)
-        self.classification_level2 = Fully_connected(input=classification_level1,name="classfication_level2", input_num=256, output_num=classification_num)
+        colorization_network6 = slim.conv2d(colorization_network5, classification_num, [3, 3], scope="colorization_network6", activation_fn=tf.nn.sigmoid)
+        self.colorization_network7 = tf.image.resize_images(colorization_network6, [self.height,self.width])
+
+        classification_level1 = slim.fully_connected(global_level3, 256, scope='classficatio_level1')
+        self.classification_level2 = slim.fully_connected(classification_level1, classification_num, scope='classficatio_level2')
 
     def Predict_y_colorization(self, X, X2):
-        return self.sess.run(self.colorization_network8, feed_dict={self.X: X, self.X2:X2})
+        return self.sess.run(self.colorization_network7, feed_dict={self.X: X, self.X2:X2})
 
     def Predict_y_classification(self, X, X2):
         return self.sess.run(tf.argmax(self.classification_level2,1), feed_dict={self.X: X, self.X2:X2})
@@ -115,7 +77,6 @@ image =cv2.imread('test_image.png',cv2.IMREAD_GRAYSCALE)
 image_height,image_width =  image.shape
 X=[image]
 
-image_size=224
 image = cv2.resize(image, (image_size, image_size), interpolation=cv2.INTER_AREA)
 X2=[image]
 
@@ -130,6 +91,10 @@ colorization_result = model.Predict_y_colorization(X,X2)
 classification_result = model.Predict_y_classification(X,X2)
 
 X=np.reshape(X,[image_height,image_width,1])
+X=X.astype(np.float32)
+X=X*100
+X=X/255
+X=X.astype(np.uint8)
 lab = np.concatenate((X,colorization_result[0]), axis=2)
 result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 

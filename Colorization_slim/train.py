@@ -4,6 +4,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
 import h5py
+import math
 
 def read_train_data():
     with h5py.File('train_data.hf', 'r') as hf:
@@ -58,12 +59,13 @@ class Model:
         fusion_layer = Fusion(input1=mid_level, input2=global_level4, name="fusion")
 
         colorization_network1 = slim.conv2d(fusion_layer,128,[3,3],scope="colorization_network1")
-        colorization_network2 = slim.conv2d_transpose(colorization_network1, 128, 2, stride=2, scope="colorization_network2")
+        colorization_network2 = tf.image.resize_images(colorization_network1, [math.ceil(image_height_size / 4), math.ceil(image_width_size / 4)])
         colorization_network3 = slim.stack(colorization_network2, slim.conv2d, [(64,[3,3]), (64,[3,3])],scope='colorization_network3')
-        colorization_network4 = slim.conv2d_transpose(colorization_network3, 64, 2, stride=2, scope="colorization_network4")
+        colorization_network4 = tf.image.resize_images(colorization_network3, [math.ceil(image_height_size / 2),math.ceil(image_width_size / 2)])
         colorization_network5 = slim.conv2d(colorization_network4, 32, [3, 3], scope="colorization_network5")
 
         colorization_network6 = slim.conv2d(colorization_network5, classification_num, [3, 3], scope="colorization_network6", activation_fn=tf.nn.sigmoid)
+        colorization_network7 = tf.image.resize_images(colorization_network6, [image_height_size,image_width_size])
         self.colorization_network7 = slim.conv2d_transpose(colorization_network6, 2, 3, stride=2, scope="colorization_network7")
 
         colorization_loss = tf.losses.mean_squared_error(labels=self.Y_colorization, predictions=self.colorization_network7)
