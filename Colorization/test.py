@@ -43,11 +43,6 @@ def Fusion(input1,input2,weight_name,bias_name):
     relu = tf.nn.relu(convolution)
     return relu
 
-def Upsample(input,name,height_size,width_size, channel):
-    weight = tf.get_variable(name, shape=[2, 2, channel, channel], initializer=tf.contrib.layers.xavier_initializer())
-    upconvolution = tf.nn.conv2d_transpose(input,weight,[batch_size, height_size, width_size, channel],[1,2,2,1],padding="SAME",name=None)
-    return upconvolution
-
 class Model:
     def __init__(self, sess,height,width):
         self.sess = sess
@@ -91,13 +86,13 @@ class Model:
         fusion_layer = Fusion(input1=mid_level2, input2=global_level7, weight_name="fusion_w", bias_name="fusion_b")
 
         colorization_network1 = Convolution(input=fusion_layer,name="colorization_network1", input_num=256, output_num=128, stride=1)
-        colorization_network2 = Upsample(input = colorization_network1,name="colorization_network2", height_size = math.ceil(self.height/4), width_size = math.ceil(self.width/4), channel = 128)
+        colorization_network2 = tf.image.resize_images(colorization_network1, [math.ceil(self.height/ 4), math.ceil(self.width/ 4)])
         colorization_network3 = Convolution(input=colorization_network2, name="colorization_network3", input_num=128, output_num=64, stride=1)
         colorization_network4 = Convolution(input=colorization_network3, name="colorization_network4", input_num=64, output_num=64, stride=1)
-        colorization_network5 = Upsample(input = colorization_network4,name="colorization_network5", height_size = math.ceil(self.height/2), width_size = math.ceil(self.width/2), channel = 64)
+        colorization_network5 = tf.image.resize_images(colorization_network4,[math.ceil(self.height / 2), math.ceil(self.width / 2)])
         colorization_network6 = Convolution(input=colorization_network5, name="colorization_network6", input_num=64, output_num=32, stride=1)
         colorization_network7 = Convolution(input=colorization_network6, name="colorization_network7", input_num=32, output_num=2, stride=1)
-        self.colorization_network8 = Upsample(input=colorization_network7, name="colorization_network8", height_size=self.height, width_size=self.width, channel=2)
+        self.colorization_network8 = tf.image.resize_images(colorization_network7,[self.height,self.width])
 
         classification_level1 = Fully_connected(input=global_level6,name="classification_level1", input_num=512, output_num=256)
         self.classification_level2 = Fully_connected(input=classification_level1,name="classification_level2", input_num=256, output_num=classification_num)
@@ -115,7 +110,6 @@ image =cv2.imread('test_image.png',cv2.IMREAD_GRAYSCALE)
 image_height,image_width =  image.shape
 X=[image]
 
-image_size=224
 image = cv2.resize(image, (image_size, image_size), interpolation=cv2.INTER_AREA)
 X2=[image]
 
@@ -130,6 +124,10 @@ colorization_result = model.Predict_y_colorization(X,X2)
 classification_result = model.Predict_y_classification(X,X2)
 
 X=np.reshape(X,[image_height,image_width,1])
+X=X.astype(np.float32)
+X=X*100
+X=X/255
+X=X.astype(np.uint8)
 lab = np.concatenate((X,colorization_result[0]), axis=2)
 result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 

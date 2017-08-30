@@ -49,11 +49,6 @@ def Fusion(input1,input2,weight_name,bias_name):
     relu = tf.nn.relu(convolution)
     return relu
 
-def Upsample(input,name,height_size,width_size, channel):
-    weight = tf.get_variable(name, shape=[2, 2, channel, channel], initializer=tf.contrib.layers.xavier_initializer())
-    upconvolution = tf.nn.conv2d_transpose(input,weight,[batch_size, height_size, width_size, channel],[1,2,2,1],padding="SAME",name=None)
-    return upconvolution
-
 class Model:
     def __init__(self, sess):
         self.sess = sess
@@ -100,13 +95,13 @@ class Model:
         fusion_layer = Fusion(input1=mid_level2, input2=global_level7, weight_name="fusion_w", bias_name="fusion_b")
 
         colorization_network1 = Convolution(input=fusion_layer,name="colorization_network1", input_num=256, output_num=128, stride=1)
-        colorization_network2 = Upsample(input = colorization_network1,name="colorization_network2", height_size = math.ceil(image_height_size/4), width_size = math.ceil(image_width_size/4), channel = 128)
+        colorization_network2 = tf.image.resize_images(colorization_network1, [math.ceil(image_height_size/4), math.ceil(image_width_size/4)])
         colorization_network3 = Convolution(input=colorization_network2, name="colorization_network3", input_num=128, output_num=64, stride=1)
         colorization_network4 = Convolution(input=colorization_network3, name="colorization_network4", input_num=64, output_num=64, stride=1)
-        colorization_network5 = Upsample(input = colorization_network4,name="colorization_network5", height_size = math.ceil(image_height_size/2), width_size = math.ceil(image_width_size/2), channel = 64)
+        colorization_network5 = tf.image.resize_images(colorization_network4, [math.ceil(image_height_size / 2), math.ceil(image_width_size / 2)])
         colorization_network6 = Convolution(input=colorization_network5, name="colorization_network6", input_num=64, output_num=32, stride=1)
         colorization_network7 = Convolution(input=colorization_network6, name="colorization_network7", input_num=32, output_num=2, stride=1)
-        self.colorization_network8 = Upsample(input=colorization_network7, name="colorization_network8", height_size=image_height_size, width_size=image_width_size, channel=2)
+        self.colorization_network8 = tf.image.resize_images(colorization_network7, [image_height_size,image_width_size])
 
         colorization_loss = tf.losses.mean_squared_error(labels=self.Y_colorization, predictions=self.colorization_network8)
 
