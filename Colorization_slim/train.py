@@ -3,15 +3,31 @@
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
-import h5py
+import csv
 import math
+import cv2
 
 def read_train_data():
-    with h5py.File('train_data.hf', 'r') as hf:
-        X = np.array(hf["X"])
-        Y_colorization = np.array(hf["Y_colorization"])
-        Y_classification = np.array(hf["Y_classification"])
+    image_size=224
+    X = []
+    Y_colorization = []
+    Y_classification = []
 
+    csv_file = open('train.csv', 'r')
+    csv_reader = csv.reader(csv_file)
+    for data in csv_reader:
+        image = cv2.imread(data[0])
+        image = cv2.resize(image, (image_size, image_size), interpolation=cv2.INTER_AREA)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+
+        input_image = image[:, :, :1]
+        output_image = image[:,:,1:]
+
+        X.append(input_image/255)
+        Y_colorization.append(output_image)
+        Y_classification.append(int(data[1]))
+
+    csv_file.close()
     return X, Y_colorization, Y_classification
 
 def Fusion(input1,input2, name):
@@ -33,15 +49,14 @@ class Model:
         loss_parameter = 1/300
         learning_rate = 0.001
 
-        self.X = tf.placeholder(tf.float32, [batch_size,image_height_size,image_width_size])
+        self.X = tf.placeholder(tf.float32, [batch_size,image_height_size,image_width_size,1])
         self.Y_colorization = tf.placeholder(tf.float32, [batch_size,image_height_size,image_width_size,2])
         self.Y_classification = tf.placeholder(tf.int32, [batch_size])
-        X = tf.reshape(self.X, [batch_size,image_height_size,image_width_size,1])
         Y_classification_one_hot = tf.one_hot(self.Y_classification, classification_num)
 
-        first_low_level = slim.stack(X, slim.conv2d, [(64, [3, 3], 2), (128, [3, 3], 1), (128, [3, 3], 2), (256, [3, 3], 1), (256,[3,3], 2), (512,[3,3],1)],scope='low_level')
+        first_low_level = slim.stack(self.X, slim.conv2d, [(64, [3, 3], 2), (128, [3, 3], 1), (128, [3, 3], 2), (256, [3, 3], 1), (256,[3,3], 2), (512,[3,3],1)],scope='low_level')
 
-        second_low_level1 = slim.conv2d(X, 64, [3, 3], stride=2, scope='low_level/low_level_1',reuse=True)
+        second_low_level1 = slim.conv2d(self.X, 64, [3, 3], stride=2, scope='low_level/low_level_1',reuse=True)
         second_low_level2 = slim.conv2d(second_low_level1, 128, [3, 3], scope='low_level/low_level_2',reuse=True)
         second_low_level3 = slim.conv2d(second_low_level2, 128, [3, 3], stride=2, scope='low_level/low_level_3',reuse=True)
         second_low_level4 = slim.conv2d(second_low_level3, 256, [3, 3], scope='low_level/low_level_4',reuse=True)

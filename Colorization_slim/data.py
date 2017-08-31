@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import numpy as np
-import cv2
 import os
-import h5py
+import csv
 
 def Classificaiton_list():
     list = []
@@ -22,32 +20,21 @@ def Classification_dir():
 
     return dir
 
-image_size = 224
-train_path = "C:/users/heojo/Desktop/Colorization/Image_data/"
+train_path = "C:/users/heojo/Desktop/Colorization_slim/Image_data/"
 classification_list= Classificaiton_list()
 classification_dir = Classification_dir()
+
+csv_file = open("train.csv","w",newline="")
+csv_writer = csv.writer(csv_file)
 
 X = []
 Y_colorization = []
 Y_classification = []
 
-for category in classification_list[:1]:
+for category in classification_list:
     names = os.listdir(train_path+category)
     for name in names:
-        image = cv2.imread(train_path + category +'/' + name)
-        image = cv2.resize(image,(image_size,image_size) ,interpolation = cv2.INTER_AREA)
+        path = train_path + category +'/' + name
+        csv_writer.writerow([path,classification_dir[category]])
 
-        input_image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
-        output_image = cv2.cvtColor(image,cv2.COLOR_BGR2LAB)
-        output_image_ab = output_image[:,:,1:]
-
-        X.append(input_image)
-        Y_colorization.append(output_image_ab)
-        Y_classification.append(classification_dir[category])
-
-'''
-with h5py.File('train_data.hf','w') as hf:
-    hf.create_dataset("X",data=X)
-    hf.create_dataset("Y_colorization", data=Y_colorization)
-    hf.create_dataset("Y_classification", data=Y_classification)
-'''
+csv_file.close()

@@ -24,18 +24,13 @@ class Model:
 
     def build_network(self):
         classification_num = 2 #205
-        loss_parameter = 1/300
-        learning_rate = 0.001
 
-        self.X = tf.placeholder(tf.float32, [batch_size,self.height,self.width])
-        X = tf.reshape(self.X, [batch_size,self.height,self.width,1])
+        self.X = tf.placeholder(tf.float32, [batch_size,self.height,self.width,1])
+        self.X2 = tf.placeholder(tf.float32, [batch_size, 224, 224,1])
 
-        self.X2 = tf.placeholder(tf.float32, [batch_size, 224, 224])
-        X2 = tf.reshape(self.X2, [batch_size, 224, 224, 1])
+        first_low_level = slim.stack(self.X, slim.conv2d, [(64, [3, 3], 2), (128, [3, 3], 1), (128, [3, 3], 2), (256, [3, 3], 1), (256,[3,3], 2), (512,[3,3],1)],scope='low_level')
 
-        first_low_level = slim.stack(X, slim.conv2d, [(64, [3, 3], 2), (128, [3, 3], 1), (128, [3, 3], 2), (256, [3, 3], 1), (256,[3,3], 2), (512,[3,3],1)],scope='low_level')
-
-        second_low_level1 = slim.conv2d(X2, 64, [3, 3], stride=2, scope='low_level/low_level_1',reuse=True)
+        second_low_level1 = slim.conv2d(self.X2, 64, [3, 3], stride=2, scope='low_level/low_level_1',reuse=True)
         second_low_level2 = slim.conv2d(second_low_level1, 128, [3, 3], scope='low_level/low_level_2',reuse=True)
         second_low_level3 = slim.conv2d(second_low_level2, 128, [3, 3], stride=2, scope='low_level/low_level_3',reuse=True)
         second_low_level4 = slim.conv2d(second_low_level3, 256, [3, 3], scope='low_level/low_level_4',reuse=True)
@@ -70,15 +65,15 @@ class Model:
     def Predict_y_classification(self, X, X2):
         return self.sess.run(tf.argmax(self.classification_level2,1), feed_dict={self.X: X, self.X2:X2})
 
-
 batch_size = 1
 image_size=224
-image =cv2.imread('test_image.png',cv2.IMREAD_GRAYSCALE)
-image_height,image_width =  image.shape
-X=[image]
+image =cv2.imread('test_image.png')
+image_height,image_width,image_channel =  image.shape
+image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+X=[image[:,:,:1]/255]
 
-image = cv2.resize(image, (image_size, image_size), interpolation=cv2.INTER_AREA)
-X2=[image]
+image2 = cv2.resize(image, (image_size, image_size), interpolation=cv2.INTER_AREA)
+X2=[image2[:,:,:1]/255]
 
 #initialize
 sess = tf.InteractiveSession()
@@ -90,12 +85,8 @@ saver.restore(sess, tf.train.latest_checkpoint('./ckpt/'))
 colorization_result = model.Predict_y_colorization(X,X2)
 classification_result = model.Predict_y_classification(X,X2)
 
-X=np.reshape(X,[image_height,image_width,1])
-X=X.astype(np.float32)
-X=X*100
-X=X/255
-X=X.astype(np.uint8)
-lab = np.concatenate((X,colorization_result[0]), axis=2)
+L=np.reshape(image[:,:,:1],[image_height,image_width,1])
+lab = np.concatenate((L,colorization_result[0]), axis=2)
 result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
 cv2.imshow('result : '+str(classification_result[0]),result)
