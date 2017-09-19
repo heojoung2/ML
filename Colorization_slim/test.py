@@ -59,7 +59,7 @@ class Model:
         self.build_network()
 
     def build_network(self):
-        classification_num = 2 #205
+        classification_num = 205
 
         self.X = tf.placeholder(tf.float32, [batch_size,self.height,self.width,1])
         self.X2 = tf.placeholder(tf.float32, [batch_size, 224, 224,1])
@@ -91,7 +91,7 @@ class Model:
                 colorization_network4 = tf.image.resize_images(colorization_network3, [math.ceil(self.height / 2),math.ceil(self.width / 2)])
                 colorization_network5 = slim.conv2d(colorization_network4, 32, [3, 3],scope="colorization_network5")
 
-                colorization_network6 = slim.conv2d(colorization_network5, classification_num, [3, 3], scope="colorization_network6", activation_fn=tf.nn.sigmoid)
+                colorization_network6 = slim.conv2d(colorization_network5, 2, [3, 3], scope="colorization_network6", activation_fn=tf.nn.sigmoid)
                 self.colorization_network7 = tf.image.resize_images(colorization_network6, [self.height,self.width])
 
                 classification_level1 = slim.fully_connected(global_level3, 256, scope='classfication_level1')
@@ -105,8 +105,7 @@ class Model:
 
 batch_size = 1
 image_size=224
-#image =cv2.imread('C:/users/heojo/Desktop/Colorization_slim/test_image.PNG')
-image =cv2.imread('C:/users/heojo/Desktop/Colorization_slim/Image_data/indoor/1.PNG')
+image =cv2.imread('C:/users/heojo/Desktop/Colorization_slim/test_image.PNG')
 image_height,image_width,image_channel =  image.shape
 image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
 X=[image[:,:,:1]/255]
