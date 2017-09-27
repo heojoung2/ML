@@ -20,11 +20,11 @@ def Classification_dir():
 
     return dir
 
-train_path = "C:/users/heojo/Desktop/Colorization_slim/Image_data/"
+train_path = "D:/images256/"
 classification_list= Classificaiton_list()
 classification_dir = Classification_dir()
 
-csv_file = open("train.csv","w",newline="")
+csv_file = open("train_data.csv", "w", newline="")
 csv_writer = csv.writer(csv_file)
 
 X = []

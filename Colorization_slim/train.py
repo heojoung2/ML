@@ -49,6 +49,7 @@ def enqueue(sess, data, batch_size, enqueue_op, queue_x_input, queue_y_ab, queue
     data = np.array(data)
     image_size=224
 
+
     while True:
         idxs = np.arange(0, num_data)
         np.random.shuffle(idxs)
@@ -75,8 +76,11 @@ def enqueue(sess, data, batch_size, enqueue_op, queue_x_input, queue_y_ab, queue
             curr_y_ab = np.array(curr_y_ab,dtype=np.float32)
             curr_y_class = np.array(curr_y_class, dtype=np.float32)
             curr_y_class=np.reshape(curr_y_class,[batch_size,1])
+            try:
+                sess.run(enqueue_op,feed_dict={queue_x_input:curr_x_input, queue_y_ab:curr_y_ab, queue_y_class:curr_y_class})
+            except:
+                exit()
 
-            sess.run(enqueue_op,feed_dict={queue_x_input:curr_x_input, queue_y_ab:curr_y_ab, queue_y_class:curr_y_class})
 
 def Fusion(input1,input2, name):
     input2 = tf.tile(input2,[1,28*28])
@@ -173,8 +177,8 @@ class Model:
 
 
 #varaibles
-epochs = 1 #11
-batch_size = 10 #128
+epochs = 11 #11
+batch_size = 16 #128
 
 train_queue_capacity = batch_size*4
 train_batch_capacity = train_queue_capacity//2

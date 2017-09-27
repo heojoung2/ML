@@ -5,6 +5,7 @@ import tensorflow.contrib.slim as slim
 import numpy as np
 import math
 import cv2
+import os
 
 def colorization_arg_scope(weight_decay=0.00004,
                            use_batch_norm=True,
@@ -106,6 +107,7 @@ class Model:
 batch_size = 1
 image_size=224
 image =cv2.imread('C:/users/heojo/Desktop/Colorization_slim/test_image.PNG')
+
 image_height,image_width,image_channel =  image.shape
 image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
 X=[image[:,:,:1]/255]
@@ -117,8 +119,8 @@ X2=[image2[:,:,:1]/255]
 sess = tf.InteractiveSession()
 model = Model(sess,image_height,image_width)
 saver = tf.train.Saver()
-saver.restore(sess, tf.train.latest_checkpoint('./ckpt/'))
-#saver.restore(sess, "./ckpt/my-model-4")
+#saver.restore(sess, tf.train.latest_checkpoint('./ckpt/'))
+saver.restore(sess, "./ckpt/my-model-1")
 
 colorization_result = model.Predict_y_colorization(X,X2)
 classification_result = model.Predict_y_classification(X,X2)
@@ -128,8 +130,11 @@ ab = (colorization_result[0]*255).astype(np.uint8)
 lab = np.concatenate( (L, ab), axis=2)
 result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
 
+category = os.listdir("D:/images256/")
+category_name = [j for i,j in enumerate(category)]
+
 cv2.imshow('gray',L)
-cv2.imshow('result : '+str(classification_result[0]),result)
+cv2.imshow('result : '+ category_name[classification_result[0]],result)
 cv2.waitKey(0)
 
 sess.close()
