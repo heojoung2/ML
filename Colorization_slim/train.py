@@ -7,6 +7,9 @@ import csv
 import math
 import cv2
 import threading
+import time
+
+start_time=time.time()
 
 def colorization_arg_scope(weight_decay=0.00004,
                            use_batch_norm=True,
@@ -236,6 +239,9 @@ for epoch in range(epochs):
             writer.add_summary(graph_loss,cnt)
 
     saver.save(sess, 'C:/Users/heojo/Desktop/Colorization_slim/ckpt/my-model',global_step=epoch)
+
+end_time=time.time()
+print('time',end_time-start_time)
 
 coord.request_stop()
 coord.join(thread)
