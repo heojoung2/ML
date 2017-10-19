@@ -180,7 +180,7 @@ class Model:
 
 
 #varaibles
-epochs = 11 #11
+epochs = 10 #11
 batch_size = 16 #128
 
 train_queue_capacity = batch_size*4
@@ -209,11 +209,12 @@ train_dequeue_op = train_queue.dequeue()
 
 train_batch_x_input, train_batch_y_ab, train_batch_y_class = tf.train.batch(train_dequeue_op, batch_size=batch_size, capacity=train_batch_capacity)
 
-
 sess = tf.InteractiveSession()
 model = Model(sess)
 saver = tf.train.Saver()
+
 sess.run(tf.global_variables_initializer())
+#saver.restore(sess, "./ckpt/my-model-5")
 writer = tf.summary.FileWriter("./board",sess.graph)
 
 train_enqueue_thread = threading.Thread(target=enqueue,args=[sess,train_data,batch_size,train_enqueue_op,train_queue_x_input,train_queue_y_ab, train_queue_y_class])

@@ -106,7 +106,7 @@ class Model:
 
 batch_size = 1
 image_size=224
-image =cv2.imread('C:/users/heojo/Desktop/Colorization_slim/test_image.PNG')
+image =cv2.imread('C:/users/heojo/Desktop/Colorization_slim/test_image1.png')
 
 image_height,image_width,image_channel =  image.shape
 image = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
@@ -119,8 +119,8 @@ X2=[image2[:,:,:1]/255]
 sess = tf.InteractiveSession()
 model = Model(sess,image_height,image_width)
 saver = tf.train.Saver()
-#saver.restore(sess, tf.train.latest_checkpoint('./ckpt/'))
-saver.restore(sess, "./ckpt/my-model-1")
+saver.restore(sess, tf.train.latest_checkpoint('./ckpt/'))
+#saver.restore(sess, "./ckpt/my-model-1")
 
 colorization_result = model.Predict_y_colorization(X,X2)
 classification_result = model.Predict_y_classification(X,X2)
