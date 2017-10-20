@@ -1,0 +1,5 @@
+model_checkpoint_path: "C:/Users/heojo/Desktop/Colorization_slim/ckpt2/my-model-9"
+all_model_checkpoint_paths: "C:/Users/heojo/Desktop/Colorization_slim/ckpt2/my-model-6"
+all_model_checkpoint_paths: "C:/Users/heojo/Desktop/Colorization_slim/ckpt2/my-model-7"
+all_model_checkpoint_paths: "C:/Users/heojo/Desktop/Colorization_slim/ckpt2/my-model-8"
+all_model_checkpoint_paths: "C:/Users/heojo/Desktop/Colorization_slim/ckpt2/my-model-9"
